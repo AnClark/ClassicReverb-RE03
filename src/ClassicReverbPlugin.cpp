@@ -249,8 +249,15 @@ void ClassicReverbPlugin::updateCoefficients()
     // ── decay (0x127BAC) ──────────────────────────────────────────────────────
     // DAT_004848B4=0.4f, DAT_004848A8=0.58f  (extracted from DLL)
     // fRoomSize=0 → decay=0.98 (long/large room); fRoomSize=1 → decay=0.4 (short)
-    decay     = 0.4f + 0.58f * (1.0f - fRoomSize);
-    decayNorm = std::sqrt(std::max(0.0f, 1.0f - decay));
+    // Normalise to sample rate: identical RT60 at all sr requires
+    //   decay_sr = decay_44100 ^ (44100 / sr)
+    // (each delay-line trip round takes sr/44100× more real time at higher sr,
+    //  so the per-sample decay must be shallower to compensate).
+    {
+        double decay44 = 0.4 + 0.58 * (1.0 - (double)fRoomSize);
+        decay     = (float)std::pow(decay44, 44100.0 / sr);
+        decayNorm = std::sqrt(std::max(0.0f, 1.0f - decay));
+    }
 
     // ── output gain (0x127BE8) ──────────────────────────────────────────────
     // Formula: exp((vol − 0.5) × ln(2) × DAT_004848C0)  where DAT_004848C0=10.0
@@ -261,12 +268,14 @@ void ClassicReverbPlugin::updateCoefficients()
     noiseAmp = 6e-8f;
 
     // ── comb-filter delay lengths ─────────────────────────────────────────────
-    // At 44100 Hz use ~65 % of max buffer capacity.
+    // At 44100 Hz use ~65 % of MAX_COMB_SIZES capacity; scale linearly with sr.
+    // Upper bound is MAX_COMB_BUF (= MAX_COMB_SIZES[i_max] * 5), so at up to
+    // ~5× 44100 Hz (≈220 kHz) the delay lines remain properly proportioned.
     for (int i = 0; i < 16; i++)
     {
         combLen[i] = (int)(MAX_COMB_SIZES[i] * 0.65 * srRatio);
-        if (combLen[i] < 8) combLen[i] = 8;
-        if (combLen[i] > MAX_COMB_SIZES[i]) combLen[i] = MAX_COMB_SIZES[i];
+        if (combLen[i] < 8)           combLen[i] = 8;
+        if (combLen[i] > MAX_COMB_BUF) combLen[i] = MAX_COMB_BUF;
         if (combPos[i] >= combLen[i]) combPos[i] = 0;
     }
 
@@ -274,8 +283,8 @@ void ClassicReverbPlugin::updateCoefficients()
     for (int i = 0; i < 3; i++)
     {
         apLen[i] = (int)(MAX_AP_SIZES[i] * 0.75 * srRatio);
-        if (apLen[i] < 4) apLen[i] = 4;
-        if (apLen[i] > MAX_AP_SIZES[i]) apLen[i] = MAX_AP_SIZES[i];
+        if (apLen[i] < 4)           apLen[i] = 4;
+        if (apLen[i] > MAX_AP_BUF)  apLen[i] = MAX_AP_BUF;
         if (apPos[i] >= apLen[i]) apPos[i] = 0;
     }
 
@@ -298,8 +307,12 @@ void ClassicReverbPlugin::updateCoefficients()
     //   lp = (1 - dampC) * newSample + dampC * prevState
     // Stability: loop gain = decay * |H_lp(ω)| ≤ decay < 1  →  always stable.
     // dampC = 0 → transparent (bright); dampC → 1 → heavy HF rolloff (dark).
-    // Headroom factor 0.94 ensures dampC < 1 even at fDamping = 1.0.
-    dampC = fDamping * 0.94f;
+    // Normalise to sr: the LP time-constant τ = -1/(ln(dampC)*sr) must equal
+    // τ at 44100 Hz, so dampC_sr = dampC_44 ^ (44100/sr).
+    {
+        double dampC_44 = (double)fDamping * 0.94;
+        dampC = (float)std::pow(dampC_44, 44100.0 / sr);
+    }
 
     // ── 1st-order LP coefficients (0x127BBC/BC0/BC4) ────────────────────────
     // Exact reconstruction from FUN_004845b8:

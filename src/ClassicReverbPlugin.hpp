@@ -53,8 +53,9 @@ enum Parameters {
 };
 
 // ─── buffer size constants ────────────────────────────────────────────────────
-// Max delay lengths derived from original binary's memory layout at 44100 Hz.
-// Scaled up slightly for safety; actual used length set at initialise().
+// MAX_COMB_SIZES / MAX_AP_SIZES: target delay lengths at 44100 Hz (from DLL).
+// MAX_COMB_BUF  / MAX_AP_BUF   : static buffer capacity, sized for up to ~220 kHz
+//   (5× the 44100 Hz target – combBuf alone is ~3.9 MB, acceptable for a plugin).
 static const int MAX_COMB_SIZES[16] = {
     6400,  6720,  7104,  7296,
     6976,  7936,  8576,  8704,
@@ -62,6 +63,8 @@ static const int MAX_COMB_SIZES[16] = {
     11200, 11648, 11776, 12288
 };
 static const int MAX_AP_SIZES[3]     = { 640, 784, 992 };
+static const int MAX_COMB_BUF        = 12288 * 5;   // 61440 – largest comb × 5×
+static const int MAX_AP_BUF          = 992   * 5;   // 4960  – largest AP   × 5×
 static const int MAX_SD_SIZE         = 32768;  // stereo pre-delay: 150 ms @ 192 kHz = 28800 samples
 static const int ER_BUF_SIZE         = 65536;  // ushort-addressed ER buffer (stereo)
 // ─── early-reflection tap gains (DAT_00488D0C, extracted from DLL DATA section) ─
@@ -131,12 +134,12 @@ private:
 
     // ── delay buffers ─────────────────────────────────────────────────────────
     // 16 comb filter delay lines (mono — stereo produced via mixing matrix)
-    float combBuf[16][12288];
+    float combBuf[16][MAX_COMB_BUF];
     int   combPos[16];   // write heads
     int   combLen[16];   // actual delay lengths (samples)
 
     // 3 allpass diffusion stages
-    float apBuf[3][992];
+    float apBuf[3][MAX_AP_BUF];
     int   apPos[3];
     int   apLen[3];
 
