@@ -113,7 +113,7 @@ public:
 
 private:
     // ── parameters (0..1 normalised, matching original offsets) ──────────────
-    float fRoomSize;      // +0xBC
+    float fRoomSize;      // room size in m² (0.625..640, log scale; 20 m² = default)
     float fStereo;        // +0xC0
     float fDamping;       // +0xC4
     float fHFColour;      // +0xC8

@@ -79,7 +79,7 @@ static inline float schroederAP(float* buf, int& pos, int len, float input, floa
 
 ClassicReverbPlugin::ClassicReverbPlugin()
     : Plugin(PARAM_COUNT, 0, 0),
-      fRoomSize(0.5f),
+      fRoomSize(20.0f),
       fStereo(1.0f),
       fDamping(0.5f),
       fHFColour(0.5f),
@@ -120,7 +120,10 @@ void ClassicReverbPlugin::initParameter(uint32_t index, Parameter& p)
     case PARAM_ROOM_SIZE:
         p.name    = "Room Size";
         p.symbol  = "room_size";
-        p.ranges.def = 0.5f;
+        p.unit    = "m2";
+        p.ranges.min = 0.625f;
+        p.ranges.max = 640.0f;
+        p.ranges.def = 20.0f;   // geometric midpoint: sqrt(0.625 * 640) = 20
         break;
     case PARAM_STEREO:
         p.name    = "Stereo Width";
@@ -247,14 +250,19 @@ void ClassicReverbPlugin::updateCoefficients()
     const double srRatio = sr / 44100.0;
 
     // ── decay (0x127BAC) ──────────────────────────────────────────────────────
-    // DAT_004848B4=0.4f, DAT_004848A8=0.58f  (extracted from DLL)
-    // fRoomSize=0 → decay=0.98 (long/large room); fRoomSize=1 → decay=0.4 (short)
-    // Normalise to sample rate: identical RT60 at all sr requires
-    //   decay_sr = decay_44100 ^ (44100 / sr)
-    // (each delay-line trip round takes sr/44100× more real time at higher sr,
-    //  so the per-sample decay must be shallower to compensate).
+    // fRoomSize is in m² [0.625..640], logarithmic range spanning 10 octaves.
+    // Map to internal t ∈ [0..1] (log scale: large room → t near 1):
+    //   t = log2(m2 / 0.625) / 10
+    //   t = 0 → 0.625 m²  → decay44 = 0.40  (short RT60, small room)
+    //   t = 1 → 640 m²    → decay44 = 0.98  (long  RT60, large room)
+    // Original formula (FUN_004845b8): decay = 0.4 + 0.58 * (1 - roomSize_norm)
+    // With roomSize_norm = 0 at max room size (640 m², dial min) the mapping is:
+    //   roomSize_norm = 1 - t  →  decay = 0.4 + 0.58 * t
+    // Then normalise to current sample rate: decay_sr = decay_44k ^ (44100 / sr)
     {
-        double decay44 = 0.4 + 0.58 * (1.0 - (double)fRoomSize);
+        double t      = std::log2((double)fRoomSize / 0.625) / 10.0;
+        t             = std::max(0.0, std::min(1.0, t));
+        double decay44 = 0.4 + 0.58 * t;
         decay     = (float)std::pow(decay44, 44100.0 / sr);
         decayNorm = std::sqrt(std::max(0.0f, 1.0f - decay));
     }
@@ -268,24 +276,31 @@ void ClassicReverbPlugin::updateCoefficients()
     noiseAmp = 6e-8f;
 
     // ── comb-filter delay lengths ─────────────────────────────────────────────
-    // At 44100 Hz use ~65 % of MAX_COMB_SIZES capacity; scale linearly with sr.
-    // Upper bound is MAX_COMB_BUF (= MAX_COMB_SIZES[i_max] * 5), so at up to
-    // ~5× 44100 Hz (≈220 kHz) the delay lines remain properly proportioned.
-    for (int i = 0; i < 16; i++)
+    // Delay time ∝ room linear dimension ∝ sqrt(area).
+    // Reference: MAX_COMB_SIZES × 0.65 corresponds to the maximum 640 m².
+    // At lower areas the lengths shrink as sqrt(m2 / 640).
     {
-        combLen[i] = (int)(MAX_COMB_SIZES[i] * 0.65 * srRatio);
-        if (combLen[i] < 8)           combLen[i] = 8;
-        if (combLen[i] > MAX_COMB_BUF) combLen[i] = MAX_COMB_BUF;
-        if (combPos[i] >= combLen[i]) combPos[i] = 0;
+        double roomLenScale = std::sqrt((double)fRoomSize / 640.0) * 0.65;
+        for (int i = 0; i < 16; i++)
+        {
+            combLen[i] = (int)(MAX_COMB_SIZES[i] * roomLenScale * srRatio);
+            if (combLen[i] < 8)            combLen[i] = 8;
+            if (combLen[i] > MAX_COMB_BUF) combLen[i] = MAX_COMB_BUF;
+            if (combPos[i] >= combLen[i])  combPos[i] = 0;
+        }
     }
 
     // ── allpass lengths ───────────────────────────────────────────────────────
-    for (int i = 0; i < 3; i++)
+    // Same sqrt(area) scaling as comb lines; reference at 640 m².
     {
-        apLen[i] = (int)(MAX_AP_SIZES[i] * 0.75 * srRatio);
-        if (apLen[i] < 4)           apLen[i] = 4;
-        if (apLen[i] > MAX_AP_BUF)  apLen[i] = MAX_AP_BUF;
-        if (apPos[i] >= apLen[i]) apPos[i] = 0;
+        double apLenScale = std::sqrt((double)fRoomSize / 640.0) * 0.75;
+        for (int i = 0; i < 3; i++)
+        {
+            apLen[i] = (int)(MAX_AP_SIZES[i] * apLenScale * srRatio);
+            if (apLen[i] < 4)           apLen[i] = 4;
+            if (apLen[i] > MAX_AP_BUF)  apLen[i] = MAX_AP_BUF;
+            if (apPos[i] >= apLen[i])   apPos[i] = 0;
+        }
     }
 
     // ── early reflection tap delays (scaled to sample rate) ───────────────────
@@ -570,10 +585,9 @@ void ClassicReverbPlugin::run(const float** inputs, float** outputs, uint32_t fr
 
         const float em = fEarlyMix;
         // ER contribution + late reverb comb sum.
-        // Removed erroneous nonlinear product (apL * combSumL) that was
-        // multiplying two signal paths together and suppressing output.
-        float reverbL = erSumL * em + eqOutL * em + combSumL;
-        float reverbR = erSumR * em + eqOutR * em + combSumR;
+        // Original line 93519: outL = (eqOut_L + erLP_L) * 2 * earlyMix + combSumL
+        float reverbL = (erSumL + eqOutL) * 2.0f * em + combSumL;
+        float reverbR = (erSumR + eqOutR) * 2.0f * em + combSumR;
 
         // Apply stereo-width output HP (0x127B9C/BA0 allpass state)
         // Original:  v = reverb_L − hpState * bc4
