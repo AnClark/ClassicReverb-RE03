@@ -31,22 +31,21 @@
  *    eqOut    = eq_x2  * eqC         + eq_x1*eqB + v*eqA
  *    eq_x2=eq_x1; eq_x1=v
  *
- *  STEP 5 – 16 comb-filter delay lines (FDN core)
+ *  STEP 5 – 3 allpass diffusion stages (on inL_d+inR_d sum)
+ *    Standard Schroeder allpass: v = k*buf[p]+x; out=buf[p]-k*v; buf[p]=v
+ *    Runs BEFORE comb; output (apOut) is the comb feedback input.
+ *
+ *  STEP 6 – 16 comb-filter delay lines (FDN core)
  *    Read all 16 lines → combOut[i] = combBuf[i][combPos[i]]
  *    combSumL = Σ combOut[i] * COMB_MIX_L[i];  × decayNorm
  *    combSumR = Σ combOut[i] * COMB_MIX_R[i];  × decayNorm
- *    fbSignal = (inL_d+inR_d) − (Σ combOut[i]) * 0.125f * decay
+ *    fbSignal = apOut − (Σ combOut[i]) * 0.125f * decay   ← apOut, not raw input!
  *    For each line:
- *      combBuf[i][pos] = combBuf[i][pos] * decay + fbSignal   // write-back
- *      // stable 1-pole LP damping inside the comb feedback loop:
  *      newSample    = combBuf[i][pos] * decay + fbSignal
  *      lp           = (1 - dampC) * newSample + dampC * dampState[i]
  *      dampState[i] = lp
  *      combBuf[i][pos] = lp
  *      combPos[i] = (combPos[i]+1) % combLen[i]
- *
- *  STEP 6 – 3 allpass diffusion stages (on inL_d+inR_d sum)
- *    Standard Schroeder allpass: v = k*buf[p]+x; out=buf[p]-k*v; buf[p]=v
  *
  *  STEP 7 – Stereo width delay
  *    When fStereo > 0.5: extra stereo delay buffer blends into result
@@ -315,7 +314,9 @@ void ClassicReverbPlugin::updateCoefficients()
     // |sdLen| is the ring-buffer depth; sign is tracked via fPreDelay itself.
     sdLen = (int)(std::abs(fPreDelay) * 0.001 * sr);
     if (sdLen >= MAX_SD_SIZE) sdLen = MAX_SD_SIZE - 1;
-    if (sdLen > 0 && sdPos >= sdLen) sdPos = 0;
+    // Always reset sdPos to 0 when sdLen changes so the ring buffer
+    // is always in a defined state (avoids stale audio on pre-delay changes).
+    sdPos = 0;
 
     // ── per-comb damping coefficient ────────────────────────────────────────
     // 1-pole LP in the comb feedback loop:
@@ -489,7 +490,18 @@ void ClassicReverbPlugin::run(const float** inputs, float** outputs, uint32_t fr
             eq_xR[1] = eq_xR[0]; eq_xR[0] = vR;
         }
 
-        // ── STEP 5: 16 comb-filter delay lines (FDN core) ────────────────────
+        // ── STEP 5: 3 allpass diffusion stages (on inL_d + inR_d) ───────────
+        // Original order (FUN_0048490c lines 93091-93100):
+        //   apIn = inL_d + inR_d  → 3 Schroeder allpass stages → apOut
+        // The allpass OUTPUT is then used as the comb feedback input (line 93108).
+        // Must happen BEFORE the comb read/write so allpass output is ready.
+        float apIn = inL_d + inR_d;
+        apIn = schroederAP(apBuf[0], apPos[0], apLen[0], apIn, apCoeff);
+        apIn = schroederAP(apBuf[1], apPos[1], apLen[1], apIn, apCoeff);
+        apIn = schroederAP(apBuf[2], apPos[2], apLen[2], apIn, apCoeff);
+        // apIn now holds apOut — the diffused mono signal
+
+        // ── STEP 6: 16 comb-filter delay lines (FDN core) ────────────────────
         // (a) Read current positions (oldest samples in each circular buffer)
         float combOut[16];
         float combSum = 0.0f;
@@ -509,9 +521,9 @@ void ClassicReverbPlugin::run(const float** inputs, float** outputs, uint32_t fr
         combSumL *= decayNorm;
         combSumR *= decayNorm;
 
-        // (c) Feedback signal (Schroeder "velvet noise" diffusion):
-        //   fbSignal = (inL_d + inR_d) − 0.125 × combSum × decay
-        float fbSignal = (inL_d + inR_d) - combSum * 0.125f * decay;
+        // (c) Feedback signal: apOut − 0.125 × combSum × decay
+        // Original line 93108: 0x127b64 (= apOut) -= combSum * 0.125 * decay
+        float fbSignal = apIn - combSum * 0.125f * decay;
 
         // (d) Damped write-back: 1-pole LP inside each comb loop
         for (int i = 0; i < 16; i++)
@@ -527,39 +539,61 @@ void ClassicReverbPlugin::run(const float** inputs, float** outputs, uint32_t fr
             if (combPos[i] >= combLen[i]) combPos[i] = 0;
         }
 
-        // ── STEP 6: 3 allpass diffusion stages (on inL_d + inR_d) ────────────
-        // Original uses the stereo SUM for these allpass filters, then the
-        // two output paths (L and R) are separated by the stereo delay.
-        float apIn = inL_d + inR_d;
-        apIn = schroederAP(apBuf[0], apPos[0], apLen[0], apIn, apCoeff);
-        apIn = schroederAP(apBuf[1], apPos[1], apLen[1], apIn, apCoeff);
-        apIn = schroederAP(apBuf[2], apPos[2], apLen[2], apIn, apCoeff);
-        // apIn now has the diffused signal
+        // ── STEP 7 & 8: output AP, sd buffer, ER add, mix ────────────────────
+        // Original structure (FUN_0048490c lines 93449-93523):
+        //   a) Apply output AP/HP to combSumL/R alone   (hpState × lp1*)
+        //   b) sd buffer routing:
+        //        sdLen = 0        → bypass entirely (pre-delay = 0 ms)
+        //        fStereo  > 0.5   → delay LATE REVERB; dry = srcL/R direct
+        //        fStereo <= 0.5   → delay DRY signal;  late reverb is direct
+        //      Negative fPreDelay swaps L/R in the buffer for R-leads-L effect.
+        //   c) Add early reflections AFTER sd buffer so ER is always dry-locked
+        //   d) wet/dry mix + output gain
 
-        // ── STEP 7: Stereo width delay ────────────────────────────────────────
-        // Original 0xC0 (fStereo) branches at 0.5:
-        //   ≤ 0.5 → bypass: output dry-delayed signal, mix reverb on top
-        //   > 0.5 → stereo delay: read from buffer, write current, swap L↔R
-        float sdOutL, sdOutR;
-        if (fStereo > 0.5f && sdLen > 0)
+        // (a) Output AP on late reverb only
         {
-            sdOutL = sdBufL[sdPos];
-            sdOutR = sdBufR[sdPos];
-            // Negative pre-delay: R leads L → swap which channel is written
+            float vL  = combSumL - hpStateL * lp1C;
+            combSumL  = hpStateL * lp1B + vL * lp1A;
+            hpStateL  = vL;
+
+            float vR  = combSumR - hpStateR * lp1C;
+            combSumR  = hpStateR * lp1B + vR * lp1A;
+            hpStateR  = vR;
+        }
+
+        // (b) sd buffer
+        float dryL, dryR;
+        if (sdLen <= 0)
+        {
+            // Pre-delay = 0 ms: bypass ring buffer completely.
+            dryL = srcL;
+            dryR = srcR;
+        }
+        else if (fStereo > 0.5f)
+        {
+            // Wide stereo: delay LATE REVERB so L/R tails diverge; dry is direct.
+            float tmpL = combSumL, tmpR = combSumR;
             if (fPreDelay >= 0.0f) {
-                sdBufL[sdPos] = inL_d;
-                sdBufR[sdPos] = inR_d;
+                combSumL = sdBufL[sdPos];
+                combSumR = sdBufR[sdPos];
+                sdBufL[sdPos] = tmpL;
+                sdBufR[sdPos] = tmpR;
             } else {
-                sdBufL[sdPos] = inR_d;   // R channel written to L slot → L is delayed
-                sdBufR[sdPos] = inL_d;
+                // Negative: R channel leads → swap L/R in buffer
+                combSumL = sdBufR[sdPos];
+                combSumR = sdBufL[sdPos];
+                sdBufL[sdPos] = tmpR;
+                sdBufR[sdPos] = tmpL;
             }
             sdPos = (sdPos + 1 >= sdLen) ? 0 : sdPos + 1;
+            dryL = srcL;
+            dryR = srcR;
         }
         else
         {
-            // Bypass or narrow path: use sdLen-sample pre-delay on dry signal
-            sdOutL = sdBufL[sdPos];
-            sdOutR = sdBufR[sdPos];
+            // Narrow / mono: delay DRY signal; late reverb is taken direct.
+            float sdOutL = sdBufL[sdPos];
+            float sdOutR = sdBufR[sdPos];
             if (fPreDelay >= 0.0f) {
                 sdBufL[sdPos] = srcL;
                 sdBufR[sdPos] = srcR;
@@ -567,50 +601,17 @@ void ClassicReverbPlugin::run(const float** inputs, float** outputs, uint32_t fr
                 sdBufL[sdPos] = srcR;
                 sdBufR[sdPos] = srcL;
             }
-            sdPos = (sdLen > 0) ? ((sdPos + 1 >= sdLen) ? 0 : sdPos + 1) : 0;
+            sdPos = (sdPos + 1 >= sdLen) ? 0 : sdPos + 1;
+            dryL = sdOutL;
+            dryR = sdOutR;
         }
 
-        // Scale apIn using width blend (like original stereo coefficient)
-        const float stereoWidth = (fStereo > 0.5f) ? 1.0f : (fStereo * 2.0f);
-        float apL = apIn;      // same diffuse signal, stereo is provided by combSumL/R
-        float apR = apIn;
-
-        // ── STEP 8: assemble reverb output ────────────────────────────────────
-        // Original (stripped of intermediate var names):
-        //   reverbL = eqOut_L * 2 * earlyMix + combSumL  + erLP_L * earlyMix
-        //   reverbR = eqOut_R * 2 * earlyMix + combSumR  + erLP_R * earlyMix
-        //   outputL = dry_L × (1-wet) + reverbL × wet
-        //   outputR = dry_R × (1-wet) + reverbR × wet
-        //   outputL,R *= outputGain
-
+        // (c) Add early reflections after sd buffer (ER is always dry-locked)
         const float em = fEarlyMix;
-        // ER contribution + late reverb comb sum.
-        // Original line 93519: outL = (eqOut_L + erLP_L) * 2 * earlyMix + combSumL
         float reverbL = (erSumL + eqOutL) * 2.0f * em + combSumL;
         float reverbR = (erSumR + eqOutR) * 2.0f * em + combSumR;
 
-        // Apply stereo-width output HP (0x127B9C/BA0 allpass state)
-        // Original:  v = reverb_L − hpState * bc4
-        //            out = hpState * bc0 + v * bbc
-        //            hpState = v
-        // (coefficients same as lp1 but inverted sense – acts as an output AP)
-        {
-            float vL   = reverbL  - hpStateL * lp1C;
-            float outLP = hpStateL * lp1B + vL * lp1A;
-            hpStateL   = vL;
-            reverbL    = outLP;
-
-            float vR   = reverbR  - hpStateR * lp1C;
-            float outRP = hpStateR * lp1B + vR * lp1A;
-            hpStateR   = vR;
-            reverbR    = outRP;
-        }
-
-        // Determine dry signal (from predelay buffer or direct)
-        float dryL = (sdLen > 0) ? sdOutL : srcL;
-        float dryR = (sdLen > 0) ? sdOutR : srcR;
-
-        // Wet/dry mix + output gain
+        // (d) Wet/dry mix + output gain
         const float wet = fWetDry;
         outL[n] = ((1.0f - wet) * dryL + reverbL * wet) * outputGain;
         outR[n] = ((1.0f - wet) * dryR + reverbR * wet) * outputGain;
