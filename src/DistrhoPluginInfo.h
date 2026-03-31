@@ -14,13 +14,13 @@
 #ifndef DISTRHO_PLUGIN_INFO_H_INCLUDED
 #define DISTRHO_PLUGIN_INFO_H_INCLUDED
 
-#define DISTRHO_PLUGIN_BRAND   "Acoustica (Recreation)"
-#define DISTRHO_PLUGIN_NAME    "Classic Reverb RE2nd"
-#define DISTRHO_PLUGIN_URI     "urn:classicverb:ClassicReverb"
-#define DISTRHO_PLUGIN_CLAP_ID "classicverb.classicReverb"
+#define DISTRHO_PLUGIN_BRAND   "AnClark Liu"
+#define DISTRHO_PLUGIN_NAME    "Classic Reverb RE-03"
+#define DISTRHO_PLUGIN_URI     "https://github.com/AnClark/ClassicReverb-RE03"
+#define DISTRHO_PLUGIN_CLAP_ID "studio.anclark.classic.reverb.re03"
 
-#define DISTRHO_PLUGIN_BRAND_ID AcRv
-#define DISTRHO_PLUGIN_UNIQUE_ID CRvb
+#define DISTRHO_PLUGIN_BRAND_ID AcRk
+#define DISTRHO_PLUGIN_UNIQUE_ID CRv3
 
 #define DISTRHO_PLUGIN_HAS_UI        0
 #define DISTRHO_PLUGIN_IS_RT_SAFE    1

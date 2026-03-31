@@ -1,8 +1,6 @@
 cmake_minimum_required (VERSION 3.20)
 
-project (ClassicReverb_RE2nd
-    LANGUAGES C CXX
-)
+project (ClassicReverb_RE03 VERSION 1.0.0)
 
 add_subdirectory (dpf)
 
