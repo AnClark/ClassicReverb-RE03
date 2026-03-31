@@ -1,5 +1,7 @@
 #pragma once
 
+#include "DistrhoDetails.hpp"   // For DISTHRO::ParameterRanges
+
 // ─── parameter indices ───────────────────────────────────────────────────────
 enum Parameters {
     PARAM_ROOM_SIZE = 0,  // 0xBC  decay coefficient
@@ -11,6 +13,18 @@ enum Parameters {
     PARAM_OUTPUT_VOLUME,   // 0xD4  output gain (0–1 → dB)
     PARAM_PREDELAY,        // 0xE0  pre-delay in ms (-150..+150 ms; negative = R leads L)
     PARAM_COUNT
+};
+
+static constexpr DISTRHO::ParameterRanges kParamRanges[PARAM_COUNT] = {
+    // def, min, max
+    {  80.0f, 0.625f, 640.0f   },   // Room Size, m²
+    {   1.0f, 0.0f,   1.0f     },   // Stereo Width
+    {  0.28f, 0.0f,   1.0f     },   // Damping
+    {  0.08f, 0.0f,   1.0f     },   // HF Colour
+    {   0.3f, 0.0f,   1.0f     },   // Early Mix
+    {   0.5f, 0.0f,   1.0f     },   // Wet/Dry Mix
+    {   0.5f, 0.0f,   1.0f     },   // Output Volume (gain)
+    {   0.0f, -150.0f, +150.0f }    // Pre-Delay (ms)
 };
 
 // ─── buffer size constants ────────────────────────────────────────────────────

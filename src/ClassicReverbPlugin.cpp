@@ -63,14 +63,14 @@
 
 ClassicReverbPlugin::ClassicReverbPlugin()
     : Plugin(PARAM_COUNT, 0, 0),
-      fRoomSize(20.0f),
-      fStereo(1.0f),
-      fDamping(0.5f),
-      fHFColour(0.5f),
-      fEarlyMix(0.3f),
-      fWetDry(0.5f),
-      fOutputVolume(0.5f),
-      fPreDelay(0.0f),
+      fRoomSize(kParamRanges[PARAM_ROOM_SIZE].def),
+      fStereo(kParamRanges[PARAM_STEREO].def),
+      fDamping(kParamRanges[PARAM_DAMPING].def),
+      fHFColour(kParamRanges[PARAM_HF_COLOUR].def),
+      fEarlyMix(kParamRanges[PARAM_EARLY_MIX].def),
+      fWetDry(kParamRanges[PARAM_WET_DRY].def),
+      fOutputVolume(kParamRanges[PARAM_OUTPUT_VOLUME].def),
+      fPreDelay(kParamRanges[PARAM_PREDELAY].def),
       rngState(12345678u)
 {
     sampleRate = getSampleRate();
@@ -96,8 +96,7 @@ ClassicReverbPlugin::ClassicReverbPlugin()
 void ClassicReverbPlugin::initParameter(uint32_t index, Parameter& p)
 {
     p.hints = kParameterIsAutomatable;
-    p.ranges.min = 0.0f;
-    p.ranges.max = 1.0f;
+    p.ranges = kParamRanges[index];
 
     switch (index)
     {
@@ -105,49 +104,37 @@ void ClassicReverbPlugin::initParameter(uint32_t index, Parameter& p)
         p.name    = "Room Size";
         p.symbol  = "room_size";
         p.unit    = "m2";
-        p.ranges.min = 0.625f;
-        p.ranges.max = 640.0f;
-        p.ranges.def = 20.0f;   // geometric midpoint: sqrt(0.625 * 640) = 20
         p.hints |= kParameterIsLogarithmic;
         break;
     case PARAM_STEREO:
         p.name    = "Stereo Width";
         p.symbol  = "stereo_width";
-        p.ranges.def = 1.0f;
         break;
     case PARAM_DAMPING:
         p.name    = "Damping";
         p.symbol  = "damping";
-        p.ranges.def = 0.5f;
         break;
     case PARAM_HF_COLOUR:
         p.name    = "HF Colour";
         p.symbol  = "hf_colour";
-        p.ranges.def = 0.5f;
         break;
     case PARAM_EARLY_MIX:
         p.name    = "Early Mix";
         p.symbol  = "early_mix";
-        p.ranges.def = 0.3f;
         break;
     case PARAM_WET_DRY:
         p.name    = "Wet/Dry";
         p.symbol  = "wet_dry";
-        p.ranges.def = 0.5f;
         break;
     case PARAM_OUTPUT_VOLUME:
         p.name    = "Output Volume";
         p.symbol  = "output_volume";
-        p.ranges.def = 0.5f;
         p.hints |= kParameterIsLogarithmic;
         break;
     case PARAM_PREDELAY:
         p.name    = "Pre-Delay";
         p.symbol  = "pre_delay";
         p.unit    = "ms";
-        p.ranges.min = -150.0f;
-        p.ranges.max =  150.0f;
-        p.ranges.def =   0.0f;
         break;
     }
 }
