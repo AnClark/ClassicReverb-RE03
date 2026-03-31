@@ -129,7 +129,10 @@ void ClassicReverbPlugin::initParameter(uint32_t index, Parameter& p)
     case PARAM_OUTPUT_VOLUME:
         p.name    = "Output Volume";
         p.symbol  = "output_volume";
-        p.hints |= kParameterIsLogarithmic;
+        // Note: parameter is stored as linear [0,1]; the dB mapping is done
+        // internally via 2^((vol-0.5)*10). Do NOT set kParameterIsLogarithmic
+        // here — min=0 breaks DPF's log normalization, and the host would
+        // apply a redundant log curve on top of the DSP's exponential mapping.
         break;
     case PARAM_PREDELAY:
         p.name    = "Pre-Delay";

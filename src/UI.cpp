@@ -234,7 +234,7 @@ void ClassicReverbUI::onImGuiDisplay()
 
                 _addKnob(PARAM_OUTPUT_VOLUME, "LEVEL", 0.0f, 1.0f,
                          kLevelMarks, IM_ARRAYSIZE(kLevelMarks),
-                         /*log=*/true, /*use_pivot=*/true, /*pivot=*/0.5f);
+                         /*log=*/false, /*use_pivot=*/true, /*pivot=*/0.5f);
 
                 _EndSection();
             }
