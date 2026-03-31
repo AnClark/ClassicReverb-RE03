@@ -123,6 +123,7 @@ void ClassicReverbPlugin::initParameter(uint32_t index, Parameter& p)
         p.ranges.min = 0.625f;
         p.ranges.max = 640.0f;
         p.ranges.def = 20.0f;   // geometric midpoint: sqrt(0.625 * 640) = 20
+        p.hints |= kParameterIsLogarithmic;
         break;
     case PARAM_STEREO:
         p.name    = "Stereo Width";
@@ -153,6 +154,7 @@ void ClassicReverbPlugin::initParameter(uint32_t index, Parameter& p)
         p.name    = "Output Volume";
         p.symbol  = "output_volume";
         p.ranges.def = 0.5f;
+        p.hints |= kParameterIsLogarithmic;
         break;
     case PARAM_PREDELAY:
         p.name    = "Pre-Delay";
