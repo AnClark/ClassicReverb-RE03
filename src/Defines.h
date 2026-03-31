@@ -51,3 +51,11 @@ static constexpr float COMB_MIX_R[16] = {
 
 // ─── Allpass coefficient (DAT_00485F68, extracted from DLL) ──────────────────
 static constexpr float ALLPASS_K = 0.6f;
+
+// ─── Fix flags ───────────────────────────────────────────────────────────────
+// CLASSIC_REVERB_FIX_STEREO_WIDTH: apply a true M/S stereo-width matrix to the late-reverb
+// output so that PARAM_STEREO produces a continuous, audible effect regardless
+// of the PARAM_PREDELAY setting.  Set to 0 to restore the original (broken)
+// behaviour where the parameter acts only as a binary routing switch inside
+// the pre-delay ring buffer and therefore has no effect at fPreDelay = 0.
+#define CLASSIC_REVERB_FIX_STEREO_WIDTH 1

@@ -342,6 +342,19 @@ void ClassicReverbPlugin::run(const float** inputs, float** outputs, uint32_t fr
             hpStateR  = vR;
         }
 
+#if CLASSIC_REVERB_FIX_STEREO_WIDTH
+        // (a2) M/S stereo-width matrix on late reverb.
+        // fStereo = 0.0 → mono (side gain = 0)
+        // fStereo = 0.5 → unity (side gain = 1, original width)
+        // fStereo = 1.0 → enhanced (side gain = 2, doubled width)
+        {
+            float mid  = (combSumL + combSumR) * 0.5f;
+            float side = (combSumL - combSumR) * 0.5f * (fStereo * 2.0f);
+            combSumL   = mid + side;
+            combSumR   = mid - side;
+        }
+#endif // CLASSIC_REVERB_FIX_STEREO_WIDTH
+
         // (b) sd buffer
         float dryL, dryR;
         if (sdLen <= 0)
