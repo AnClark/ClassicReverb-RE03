@@ -232,7 +232,9 @@ void ClassicReverbUI::onImGuiDisplay()
 
                 ImGui::SameLine(0, 30);
 
-                _addKnob(PARAM_OUTPUT_VOLUME, "LEVEL", 0.0f, 1.0f,
+                // NOTE: Level knob is stored as linear 0..1 but mapped to dB in the DSP,
+                //       so we use a custom scale mark table and disable ImGuiKnobs' built-in logarithmic mode.
+                _addKnob(PARAM_OUTPUT_VOLUME, " LEVEL (dB)", 0.0f, 1.0f,
                          kLevelMarks, IM_ARRAYSIZE(kLevelMarks),
                          /*log=*/false, /*use_pivot=*/true, /*pivot=*/0.5f);
 
