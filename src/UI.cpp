@@ -183,17 +183,17 @@ void ClassicReverbUI::onImGuiDisplay()
                 ImGui::Dummy(ImVec2(12, 0));
                 ImGui::SameLine();
 
-                _addKnob(PARAM_ROOM_SIZE,  "SIZE (m\xc2\xb2)", 0.625f, 640.0f,
+                _addKnob(PARAM_ROOM_SIZE,  "SIZE (m\xc2\xb2)",
                          kSizeMarks, IM_ARRAYSIZE(kSizeMarks), /*log=*/true);
 
                 ImGui::SameLine(0, 35);
 
-                _addKnob(PARAM_DAMPING, "DAMPING", 0.0f, 1.0f,
+                _addKnob(PARAM_DAMPING, "DAMPING",
                          kDampingMarks, IM_ARRAYSIZE(kDampingMarks));
 
                 ImGui::SameLine(0, 35);
 
-                _addKnob(PARAM_PREDELAY, "PREDELAY (ms)", -150.0f, 150.0f,
+                _addKnob(PARAM_PREDELAY, "PREDELAY (ms)",
                          kPreDelayMarks, IM_ARRAYSIZE(kPreDelayMarks));
 
                 _EndSection();
@@ -207,12 +207,12 @@ void ClassicReverbUI::onImGuiDisplay()
                 ImGui::Dummy(ImVec2(8, 0));
                 ImGui::SameLine();
 
-                _addKnob(PARAM_STEREO, "STEREO WIDTH", 0.0f, 1.0f,
+                _addKnob(PARAM_STEREO, "STEREO WIDTH",
                          kStereoMarks, IM_ARRAYSIZE(kStereoMarks));
 
                 ImGui::SameLine(0, 20);
 
-                _addKnob(PARAM_HF_COLOUR, "HF COLOUR", 0.0f, 1.0f,
+                _addKnob(PARAM_HF_COLOUR, "HF COLOUR", 
                          kHFColourMarks, IM_ARRAYSIZE(kHFColourMarks));
 
                 _EndSection();
@@ -226,19 +226,19 @@ void ClassicReverbUI::onImGuiDisplay()
                 ImGui::Dummy(ImVec2(2, 0));
                 ImGui::SameLine();
 
-                _addKnob(PARAM_EARLY_MIX, "EARLY MIX", 0.0f, 1.0f,
+                _addKnob(PARAM_EARLY_MIX, "EARLY MIX",
                          kEarlyMixMarks, IM_ARRAYSIZE(kEarlyMixMarks));
 
                 ImGui::SameLine(0, 30);
 
-                _addKnob(PARAM_WET_DRY, "MIX", 0.0f, 1.0f,
+                _addKnob(PARAM_WET_DRY, "MIX",
                          kMixMarks, IM_ARRAYSIZE(kMixMarks));
 
                 ImGui::SameLine(0, 30);
 
                 // NOTE: Level knob is stored as linear 0..1 but mapped to dB in the DSP,
                 //       so we use a custom scale mark table and disable ImGuiKnobs' built-in logarithmic mode.
-                _addKnob(PARAM_OUTPUT_VOLUME, " LEVEL (dB)", 0.0f, 1.0f,
+                _addKnob(PARAM_OUTPUT_VOLUME, " LEVEL (dB)",
                          kLevelMarks, IM_ARRAYSIZE(kLevelMarks),
                          /*log=*/false, /*use_pivot=*/true, /*pivot=*/0.5f);
 
