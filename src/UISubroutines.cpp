@@ -123,8 +123,8 @@ void ClassicReverbUI::_drawChassisBackground(float margin, float rounding)
             IM_COL32(0, 0, 0, alpha), rounding);
     }
 
-    // Main panel – base colour #b77f58 (warm bronze)
-    dl->AddRectFilled(panelMin, panelMax, IM_COL32(0xb7, 0x7f, 0x58, 0xff), rounding);
+    // Main panel – base colour #ac6848 (slightly different from RE-04, for distinction)
+    dl->AddRectFilled(panelMin, panelMax, IM_COL32(0xac, 0x68, 0x48, 0xff), rounding);
 
     // Subtle top-left highlight edge
     dl->AddRect(panelMin, panelMax, IM_COL32(0xff, 0xe0, 0xb8, 60), rounding, 0, 1.5f);
