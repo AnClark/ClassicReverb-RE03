@@ -2,10 +2,15 @@ cmake_minimum_required (VERSION 3.20)
 
 project (ClassicReverb_RE03 VERSION 1.0.0)
 
+option (CONFIG_BUILD_JACK_STANDALONE "Build JACK standalone format (for debugging)")
+if (CONFIG_BUILD_JACK_STANDALONE)
+    set (TARGET_JACK jack)
+endif ()
+
 add_subdirectory (dpf)
 
 dpf_add_plugin (${PROJECT_NAME}
-    TARGETS vst2 vst3 lv2 clap jack
+    TARGETS vst2 vst3 lv2 clap ${TARGET_JACK}
     FILES_DSP
         src/ClassicReverbPlugin.cpp
         src/CoreDSP.cpp
