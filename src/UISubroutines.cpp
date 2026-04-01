@@ -293,6 +293,7 @@ void ClassicReverbUI::_addKnob(int paramId, const char* label,
                               marks, mark_count, &kScaleMarkStyle, pivot_value))
     {
         setParameterValue((uint32_t)paramId, fParams[paramId]);
+        fPresetManager->markModified();
     }
 
     if (ImGui::IsItemActivated())
