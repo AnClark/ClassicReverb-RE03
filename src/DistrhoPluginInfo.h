@@ -22,7 +22,13 @@
 #define DISTRHO_PLUGIN_BRAND_ID AcRk
 #define DISTRHO_PLUGIN_UNIQUE_ID CRv3
 
-#define DISTRHO_PLUGIN_HAS_UI        0
+#define DISTRHO_PLUGIN_HAS_UI          1
+#define DISTRHO_UI_USE_CUSTOM           1
+#define DISTRHO_UI_CUSTOM_INCLUDE_PATH  "DearImGui.hpp"
+#define DISTRHO_UI_CUSTOM_WIDGET_TYPE   DGL_NAMESPACE::ImGuiTopLevelWidget
+#define DISTRHO_UI_DEFAULT_WIDTH        (750 + 120 - 6)   // Base width + right panel
+#define DISTRHO_UI_DEFAULT_HEIGHT       120
+
 #define DISTRHO_PLUGIN_IS_RT_SAFE    1
 #define DISTRHO_PLUGIN_NUM_INPUTS    2
 #define DISTRHO_PLUGIN_NUM_OUTPUTS   2
