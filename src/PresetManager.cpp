@@ -25,13 +25,33 @@ namespace fs = std::filesystem;
 
 // ── Factory presets ────────────────────────────────────────────────────────
 // Name, RoomSize(m²), Stereo, Damping, HFColour, EarlyMix, WetDry, OutputVolume, PreDelay(ms)
+//
+// Design notes:
+//  · RoomSize drives decay: t=log2(m²/0.625)/10, decay44=0.40+0.58·t
+//      3.5 m² → decay44≈0.54   22 m² → ≈0.69   90 m² → ≈0.80
+//      145 m² → ≈0.85  260 m² → ≈0.90  590 m² → ≈0.97
+//  · Damping=0 keeps full HF (bright/metallic); near 1 → heavy LF-only tail
+//  · HFColour shapes the 1st-order + biquad filter on early reflections;
+//    intermediate values (~0.30–0.55) add a mid-presence colouration
+//  · EarlyMix is multiplied by 2.0 in the mix formula — keep < 0.65
+//  · Stereo: 0.5 = unprocessed FDN width; 1.0 = maximum M/S widening
 static const Preset kFactoryPresets[] = {
-    {"Grand Hall",     400.0f, 0.85f, 0.12f, 0.10f, 0.35f, 0.45f, 0.5f,  18.0f},
-    {"Small Room",       8.0f, 0.60f, 0.55f, 0.15f, 0.55f, 0.35f, 0.5f,   0.0f},
-    {"Cathedral",      560.0f, 0.95f, 0.06f, 0.05f, 0.18f, 0.55f, 0.5f,  30.0f},
-    {"Bright Chamber",  40.0f, 0.75f, 0.10f, 0.65f, 0.45f, 0.40f, 0.5f,   6.0f},
-    {"Warm Plate",      72.0f, 0.80f, 0.65f, 0.02f, 0.28f, 0.48f, 0.5f,   0.0f},
-    {"Long Ambience",  200.0f, 0.80f, 0.18f, 0.10f, 0.22f, 0.38f, 0.5f,  10.0f},
+    // Compact deadened booth — heavily absorbed, mostly dry, subtle ambience
+    {"Studio Booth",     3.5f, 0.40f, 0.80f, 0.05f, 0.62f, 0.20f, 0.50f,   1.0f},
+    // Live, punchy drum room — reflective hard walls, strong transient attack
+    {"Drum Room Live",  22.0f, 0.82f, 0.18f, 0.42f, 0.68f, 0.32f, 0.52f,   4.0f},
+    // Smooth diffuse plate — minimal early details, lush even tail
+    {"Smooth Plate",    50.0f, 0.72f, 0.40f, 0.32f, 0.08f, 0.50f, 0.50f,   0.0f},
+    // Timber concert hall — balanced early/late, warm wooden acoustics
+    {"Concert Hall",   145.0f, 0.88f, 0.28f, 0.14f, 0.40f, 0.46f, 0.50f,  18.0f},
+    // Vaulted stone chamber — hard reflective stone, dense ringing reverb
+    {"Stone Vault",     35.0f, 0.68f, 0.10f, 0.22f, 0.58f, 0.38f, 0.50f,   6.0f},
+    // Lush pad wash — long, dark, wide tail; minimal early reflections
+    {"Pad Bloom",      260.0f, 0.95f, 0.58f, 0.06f, 0.12f, 0.62f, 0.48f,  20.0f},
+    // Industrial metal silo — near-zero damping, resonant metallic colouring
+    {"Resonant Silo",   90.0f, 0.62f, 0.04f, 0.52f, 0.50f, 0.52f, 0.48f,  10.0f},
+    // Vast open air — sky-like infinite decay, very long pre-delay, no absorption
+    {"Open Sky",       590.0f, 1.00f, 0.06f, 0.09f, 0.05f, 0.70f, 0.46f,  55.0f},
 };
 static constexpr int kFactoryPresetsCount = (int)(sizeof(kFactoryPresets) / sizeof(kFactoryPresets[0]));
 
