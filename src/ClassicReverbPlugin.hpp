@@ -55,6 +55,8 @@ public:
     void   initParameter(uint32_t index, Parameter& parameter) override;
     float  getParameterValue(uint32_t index) const override;
     void   setParameterValue(uint32_t index, float value) override;
+    void   initState(uint32_t index, State& state) override;
+    void   setState(const char* key, const char* value) override;
     void   activate() override;
     void   sampleRateChanged(double newSampleRate) override;
     void   run(const float** inputs, float** outputs, uint32_t frames) override;

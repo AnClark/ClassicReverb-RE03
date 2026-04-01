@@ -29,6 +29,11 @@
 #define DISTRHO_UI_DEFAULT_WIDTH        (750 + 120 - 6)   // Base width + right panel
 #define DISTRHO_UI_DEFAULT_HEIGHT       120
 
+#define DISTRHO_PLUGIN_WANT_STATE       1
+
+#define CLASSIC_REVERB_APPDATA_DIR_NAME "ClassicReverbRE03" // Subdirectory in user appdata folder for storing presets, etc.
+#define CLASSIC_REVERB_PRESET_FILE_NAME "presets.json"      // Filename for storing user presets on disk
+
 #define DISTRHO_PLUGIN_IS_RT_SAFE    1
 #define DISTRHO_PLUGIN_NUM_INPUTS    2
 #define DISTRHO_PLUGIN_NUM_OUTPUTS   2
