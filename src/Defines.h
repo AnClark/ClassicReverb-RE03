@@ -73,3 +73,18 @@ static constexpr float ALLPASS_K = 0.6f;
 // behaviour where the parameter acts only as a binary routing switch inside
 // the pre-delay ring buffer and therefore has no effect at fPreDelay = 0.
 #define CLASSIC_REVERB_FIX_STEREO_WIDTH 1
+
+// Set to 1 to apply tanh soft-clipping to the final output.
+// Formula: y = C * tanh(x / C), where C = kSoftClipCeiling.
+// Properties:
+//   - Slope = 1 at x=0 (fully transparent for normal-level signals)
+//   - Soft knee begins around |x| ≈ C / 3 ≈ 1.0 (0 dBFS)
+//   - Hard asymptote at ±C (output never exceeds kSoftClipCeiling)
+// Set to 0 to bypass (original plugin behaviour: no output limiting).
+#define CLASSIC_REVERB_OUTPUT_SOFT_CLIP 1
+
+// Soft-clip ceiling: 10^(+5/20) ≈ 1.778 (+5 dBFS).
+// Signals well below 0 dBFS pass through unaffected; peaks above 0 dBFS
+// are progressively attenuated; hard asymptote at +5 dBFS.
+static constexpr float kSoftClipCeiling    = 1.77827941f;          // 10^(5/20)
+static constexpr float kSoftClipCeilingInv = 1.0f / 1.77827941f;  // precomputed reciprocal
