@@ -10,11 +10,13 @@
 #include "../fonts/FontAwesome5.hpp"
 #include "../fonts/IconFontAwesome5.h"
 
+static constexpr float kScaleMarkInitFontSize = 12.5f;
+
 // Scale-mark style shared across all knobs
 ImGuiKnobs_Mod::KnobScaleMarkStyle kScaleMarkStyle = {
     .outer_radius = 1.20f,
     .tick_length  = 0.50f,
-    .font_size    = 12.5f,
+    .font_size    = kScaleMarkInitFontSize,
 };
 
 // -----------------------------------------------------------------------
@@ -94,6 +96,9 @@ void ClassicReverbUI::_loadFonts()
 
     // Use the large font for scale marks so they render crisply when down-sampled
     kScaleMarkStyle.custom_font = io.Fonts->Fonts[2];
+
+    // Remember to scale the scale mark font's size to screen DPI
+    kScaleMarkStyle.font_size = kScaleMarkInitFontSize * getScaleFactor();
 }
 
 // -----------------------------------------------------------------------
@@ -111,7 +116,7 @@ void ClassicReverbUI::_drawChassisBackground(float margin, float rounding)
 
     // Soft drop-shadow (light from upper-left)
     static constexpr int   kShadowLayers = 6;
-    static constexpr float kShadowMax    = 9.0f;
+    static const float     kShadowMax    = SCALE(9.0f);
     for (int i = kShadowLayers; i >= 1; --i)
     {
         const float frac   = static_cast<float>(i) / kShadowLayers;
@@ -147,11 +152,11 @@ void ClassicReverbUI::_drawKjaerhusLogo(const ImVec2& size)
 
     // "Triangle" shape (Bezier curves giving a concave look)
     {
-        const float left_line_length = 40.0f;
-        const float triangle_height  = 35.0f;
-        const float curve_inset      = 10.0f;
+        const float left_line_length = SCALE(40.0f);
+        const float triangle_height  = SCALE(35.0f);
+        const float curve_inset      = SCALE(10.0f);
 
-        const ImVec2 p1 = ImVec2(pos.x + 72.0f, pos.y - 1.0f);
+        const ImVec2 p1 = ImVec2(pos.x + SCALE(72.0f), pos.y - SCALE(1.0f));
         const ImVec2 p2 = ImVec2(p1.x, p1.y + left_line_length);
         const ImVec2 p3 = ImVec2(p1.x + triangle_height, p1.y + (left_line_length * 0.5f));
 
@@ -168,24 +173,24 @@ void ClassicReverbUI::_drawKjaerhusLogo(const ImVec2& size)
     }
 
     // "KJÆRHUS AUDIO" text
-    ImGuiExt::AddTextScaled(draw_list, ImGui::GetIO().Fonts->Fonts[2], 20.0f,
-                            ImVec2(pos.x + 10.0f, pos.y + 8.0f),
+    ImGuiExt::AddTextScaled(draw_list, ImGui::GetIO().Fonts->Fonts[2], SCALE(20.0f),
+                            ImVec2(pos.x + SCALE(10.0f), pos.y + SCALE(8.0f)),
                             IM_COL32(255, 255, 255, 255),
                             "KJ\xc3\x86RHUS AUDIO", 0.65f, 1.0f);
 
     // "Recreated by AnClark" badge with semi-transparent background
     {
         const char* info_text      = "Recreated by AnClark";
-        constexpr float kFontSz    = 16.0f;
-        constexpr float kScaleX    = 0.8f;
-        constexpr float kScaleY    = 0.8f;
-        constexpr float kPadX      = 8.0f;
-        constexpr float kPadY      = 1.0f;
-        constexpr float kRounding  = 3.0f;
+        const float kFontSz    = SCALE(16.0f);
+        const float kScaleX    = 0.8f;
+        const float kScaleY    = 0.8f;
+        const float kPadX      = SCALE(8.0f);
+        const float kPadY      = SCALE(1.0f);
+        const float kRounding  = SCALE(3.0f);
         constexpr ImU32 kBgColor   = IM_COL32(100, 100, 100, 60);
 
         ImFont*      font     = ImGui::GetIO().Fonts->Fonts[2];
-        const ImVec2 text_pos = ImVec2(pos.x + 10.0f, pos.y + 8.0f + 22.0f);
+        const ImVec2 text_pos = ImVec2(pos.x + SCALE(10.0f), pos.y + SCALE(8.0f + 22.0f));
         const ImVec2 raw_sz   = font->CalcTextSizeA(kFontSz, FLT_MAX, 0.0f, info_text);
         const ImVec2 text_sz  = ImVec2(raw_sz.x * kScaleX, raw_sz.y * kScaleY);
 
@@ -210,7 +215,7 @@ void ClassicReverbUI::_drawPluginName()
     // "Classic Reverb" in Cormorant italic
     ImGui::AlignTextToFramePadding();
     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[3]);
-    ImGui::Dummy(ImVec2(0, 2));
+    ImGui::Dummy(ImVec2(0, SCALE(2)));
     ImGui::SameLine();
     ImGui::Text("Classic Reverb");
     ImGui::PopFont();
@@ -221,10 +226,10 @@ void ClassicReverbUI::_drawPluginName()
     {
         ImDrawList*     dl      = ImGui::GetWindowDrawList();
         ImFont*         font    = ImGui::GetIO().Fonts->Fonts[2];
-        constexpr float kFontSz = 12.5f;
-        constexpr float kPadX   = 5.0f - 2.0f;
-        constexpr float kPadY   = 2.0f;
-        constexpr float kRound  = 4.0f;
+        const float     kFontSz = SCALE(12.5f);
+        const float     kPadX   = SCALE(5.0f - 2.0f);
+        const float     kPadY   = SCALE(2.0f);
+        const float     kRound  = SCALE(4.0f);
 
         const ImVec2 re_sz  = font->CalcTextSizeA(kFontSz, FLT_MAX, 0.0f, "RE");
         const ImVec2 o3_sz  = font->CalcTextSizeA(kFontSz, FLT_MAX, 0.0f, "03");
@@ -233,7 +238,7 @@ void ClassicReverbUI::_drawPluginName()
         const float  rw     = o3_sz.x + kPadX * 2.0f;
 
         const ImVec2 cursor_pos = ImGui::GetCursorScreenPos();
-        const ImVec2 p0  = ImVec2(cursor_pos.x, cursor_pos.y + 4.0f);
+        const ImVec2 p0  = ImVec2(cursor_pos.x, cursor_pos.y + SCALE(4.0f));
         const ImVec2 mid = ImVec2(p0.x + lw,      p0.y);
         const ImVec2 p1  = ImVec2(p0.x + lw + rw, p0.y + height);
 
@@ -269,8 +274,8 @@ void ClassicReverbUI::_addKnob(int paramId, const char* label,
                                 const ImGuiKnobs_Mod::KnobScaleMark* marks, uint32_t mark_count,
                                 bool isLogarithmic, bool use_pivot, float pivot_value)
 {
-    constexpr float KNOB_SIZE    = 50.0f;
-    constexpr int   DEFAULT_STEP = 10;
+    const float   KNOB_SIZE    = SCALE(50.0f);
+    constexpr int DEFAULT_STEP = 10;
 
     constexpr auto  IMGUIKNOBS_PI = 3.14159265358979323846f;
     constexpr float angle_min     = IMGUIKNOBS_PI * (130.0f / 180.0f);
@@ -320,7 +325,7 @@ bool ClassicReverbUI::_BeginSection(const char* title, float width)
     ImGui::PopFont();
 
     // Gap between title and top scale marks
-    ImGui::Dummy(ImVec2(0, 8));
+    ImGui::Dummy(ImVec2(0, SCALE(8)));
 
     return true;
 }
