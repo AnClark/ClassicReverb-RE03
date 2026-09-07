@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.20)
 
-project (ClassicReverb_RE03 VERSION 1.1.0)
+project (ClassicReverb_RE03 VERSION 1.1.1)
 
 option (CONFIG_BUILD_JACK_STANDALONE "Build JACK standalone format (for debugging)")
 if (CONFIG_BUILD_JACK_STANDALONE)
