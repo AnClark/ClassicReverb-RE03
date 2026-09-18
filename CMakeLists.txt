@@ -26,7 +26,7 @@ set (FONT_FILES
 add_subdirectory (dpf)
 
 dpf_add_plugin (${PROJECT_NAME}
-    TARGETS vst2 vst3 lv2 clap ${TARGET_JACK}
+    TARGETS vst2 vst3 clap ${TARGET_JACK}
     FILES_DSP
         src/ClassicReverbPlugin.cpp
         src/CoreDSP.cpp
