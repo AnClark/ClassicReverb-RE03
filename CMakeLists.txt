@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.20)
 
 project (ClassicReverb-RE03
-    VERSION 1.1.1
+    VERSION 1.2.0
     DESCRIPTION "Classic Reverb RE-03 audio plugin"
 )
 
