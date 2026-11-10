@@ -38,6 +38,9 @@
 #include <cstring>
 
 #include "Defines.h"
+#if CLASSIC_REVERB_SILENCE_GATE
+#include "SilenceGate.h"
+#endif // CLASSIC_REVERB_SILENCE_GATE
 
 // ─── plugin class ─────────────────────────────────────────────────────────────
 class ClassicReverbPlugin : public DISTRHO::Plugin
@@ -115,6 +118,15 @@ private:
     // ── misc state ────────────────────────────────────────────────────────────
     uint32_t rngState;             // simple PRNG state (replaces _RandExt)
     double   sampleRate;
+
+#if CLASSIC_REVERB_SILENCE_GATE
+    // Silence gate: once the dry input and the PRE-wet reverb output have both
+    // been inaudible for 0.5 s, run() early-outs sample by sample.  On the
+    // sample where it arms, it invokes clearBuffers() via a callback so the
+    // early-out starts from a truly empty tank (and no denormal residue keeps
+    // circulating).
+    SilenceGate fSilenceGate;
+#endif // CLASSIC_REVERB_SILENCE_GATE
 
     // ── private helpers ───────────────────────────────────────────────────────
     void updateCoefficients();
